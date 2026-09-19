@@ -66,6 +66,13 @@ export default async function DashboardPage() {
             CampusFlow
           </Link>
 
+          <Link
+            href="/profile/settings"
+            className="text-sm font-medium text-slate-600 hover:text-slate-950"
+          >
+            Profile
+          </Link>
+
           <form action={signOut}>
             <button className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-slate-50">
               Sign out
@@ -132,13 +139,16 @@ export default async function DashboardPage() {
             </p>
           </Link>
 
-          <div className="rounded-2xl border bg-white p-6">
+          <Link
+            href="/friends"
+            className="rounded-2xl border bg-white p-6 transition hover:border-slate-400"
+          >
             <p className="text-lg font-medium text-slate-950">Friends</p>
 
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              Social progress is coming in the next build stage.
+              Connect with classmates and follow progress together.
             </p>
-          </div>
+          </Link>
         </section>
       </div>
     </main>
