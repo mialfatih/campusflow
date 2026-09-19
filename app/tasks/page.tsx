@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 
-import { createTask, deleteTask, updateTask } from "./actions";
+import { createTask, deleteTask, moveTaskUp, updateTask } from "./actions";
 
 import { AppHeader } from "@/components/app-header";
 
@@ -28,6 +28,7 @@ type Task = {
   progress: number;
   need_help: boolean;
   visibility: string;
+  position: number;
   courses:
     | {
         name: string;
@@ -138,6 +139,7 @@ export default async function TasksPage() {
         progress,
         need_help,
         visibility,
+        position,
         courses (
           name,
           code
@@ -146,9 +148,8 @@ export default async function TasksPage() {
       )
       .eq("user_id", user.id)
       .in("course_id", courseIds)
-      .order("due_at", {
+      .order("position", {
         ascending: true,
-        nullsFirst: false,
       });
 
     tasks = (data ?? []) as Task[];
@@ -359,13 +360,17 @@ export default async function TasksPage() {
                             Drop assignment here
                           </div>
                         ) : (
-                          statusTasks.map((task) => (
+                          statusTasks.map((task, index) => (
                             <DraggableTask
                               key={task.id}
                               id={task.id}
                               status={task.status}
                             >
-                              <TaskCard task={task} courses={courses} />
+                              <TaskCard
+                                task={task}
+                                courses={courses}
+                                canMoveUp={index > 0}
+                              />
                             </DraggableTask>
                           ))
                         )}
@@ -382,12 +387,36 @@ export default async function TasksPage() {
   );
 }
 
-function TaskCard({ task, courses }: { task: Task; courses: Course[] }) {
+function TaskCard({
+  task,
+  courses,
+  canMoveUp,
+}: {
+  task: Task;
+  courses: Course[];
+  canMoveUp: boolean;
+}) {
   const courseName = getCourseName(task);
   const courseCode = getCourseCode(task);
 
+  const priorityCardStyle: Record<string, string> = {
+    high: "border-l-4 border-l-rose-500",
+    medium: "border-l-4 border-l-amber-400",
+    low: "border-l-4 border-l-slate-300",
+  };
+
+  const priorityBadgeStyle: Record<string, string> = {
+    high: "bg-rose-50 text-rose-700",
+    medium: "bg-amber-50 text-amber-700",
+    low: "bg-slate-100 text-slate-600",
+  };
+
   return (
-    <article className="rounded-2xl border bg-white p-5 shadow-sm">
+    <article
+      className={`rounded-2xl border bg-white p-5 shadow-sm ${
+        priorityCardStyle[task.priority] ?? ""
+      }`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
@@ -433,7 +462,11 @@ function TaskCard({ task, courses }: { task: Task; courses: Course[] }) {
       </div>
 
       <div className="mt-5 flex flex-wrap gap-2">
-        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600">
+        <span
+          className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+            priorityBadgeStyle[task.priority] ?? "bg-slate-100 text-slate-600"
+          }`}
+        >
           {priorityLabels[task.priority]} priority
         </span>
 
@@ -445,6 +478,22 @@ function TaskCard({ task, courses }: { task: Task; courses: Course[] }) {
           {task.visibility}
         </span>
       </div>
+
+      <form action={moveTaskUp} className="mt-4">
+        <input type="hidden" name="task_id" value={task.id} />
+
+        <button
+          type="submit"
+          disabled={!canMoveUp}
+          className={`text-xs font-medium ${
+            canMoveUp
+              ? "text-slate-500 hover:text-slate-950"
+              : "cursor-not-allowed text-slate-300"
+          }`}
+        >
+          Move up
+        </button>
+      </form>
 
       <Link
         href={`/tasks/${task.id}`}

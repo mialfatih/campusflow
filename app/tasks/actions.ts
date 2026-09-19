@@ -92,6 +92,19 @@ export async function createTask(formData: FormData) {
     throw new Error("Course not found.");
   }
 
+  const { data: lastTask } = await supabase
+    .from("tasks")
+    .select("position")
+    .eq("user_id", user.id)
+    .eq("status", "todo")
+    .order("position", {
+      ascending: false,
+    })
+    .limit(1)
+    .maybeSingle();
+
+  const nextPosition = (lastTask?.position ?? -1) + 1;
+
   const { error } = await supabase.from("tasks").insert({
     user_id: user.id,
     course_id: courseId,
@@ -103,6 +116,7 @@ export async function createTask(formData: FormData) {
     status: "todo",
     progress: 0,
     need_help: false,
+    position: nextPosition,
   });
 
   if (error) {
@@ -245,13 +259,29 @@ export async function moveTaskStatus(taskId: string, newStatus: string) {
 
   const checklist = await getChecklistState(supabase, taskId);
 
+  const { data: lastTask } = await supabase
+    .from("tasks")
+    .select("position")
+    .eq("user_id", user.id)
+    .eq("status", newStatus)
+    .neq("id", taskId)
+    .order("position", {
+      ascending: false,
+    })
+    .limit(1)
+    .maybeSingle();
+
+  const nextPosition = (lastTask?.position ?? -1) + 1;
+
   const updateData: {
     status: TaskStatus;
     submitted_at: string | null;
+    position: number;
     progress?: number;
     need_help?: boolean;
   } = {
     status: newStatus as TaskStatus,
+    position: nextPosition,
     submitted_at: newStatus === "submitted" ? new Date().toISOString() : null,
   };
 
@@ -286,4 +316,24 @@ export async function moveTaskStatus(taskId: string, newStatus: string) {
   revalidatePath("/tasks");
   revalidatePath(`/tasks/${taskId}`);
   revalidatePath("/dashboard");
+}
+
+export async function moveTaskUp(formData: FormData) {
+  const { supabase } = await getAuthenticatedUser();
+
+  const taskId = String(formData.get("task_id") ?? "");
+
+  if (!taskId) {
+    throw new Error("Task ID is required.");
+  }
+
+  const { error } = await supabase.rpc("move_task_up", {
+    p_task_id: taskId,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/tasks");
 }
