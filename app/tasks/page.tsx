@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/server";
 
 import { createTask, deleteTask, updateTask } from "./actions";
 
+import { DraggableTask, KanbanBoard, KanbanColumn } from "./kanban-board";
+
 type Course = {
   id: string;
   name: string;
@@ -362,42 +364,39 @@ export default async function TasksPage() {
               </form>
             </section>
 
-            <section className="mt-10 grid gap-5 xl:grid-cols-4">
-              {(["todo", "in_progress", "review", "submitted"] as const).map(
-                (status) => {
-                  const statusTasks = taskGroups[status];
+            <section className="mt-10">
+              <KanbanBoard>
+                {(["todo", "in_progress", "review", "submitted"] as const).map(
+                  (status) => {
+                    const statusTasks = taskGroups[status];
 
-                  return (
-                    <div key={status}>
-                      <div className="mb-4 flex items-center justify-between">
-                        <h2 className="font-semibold text-slate-950">
-                          {statusLabels[status]}
-                        </h2>
-
-                        <span className="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600">
-                          {statusTasks.length}
-                        </span>
-                      </div>
-
-                      <div className="space-y-4">
+                    return (
+                      <KanbanColumn
+                        key={status}
+                        id={status}
+                        title={statusLabels[status]}
+                        count={statusTasks.length}
+                      >
                         {statusTasks.length === 0 ? (
                           <div className="rounded-2xl border border-dashed bg-white p-5 text-center text-sm text-slate-400">
-                            No assignments
+                            Drop assignment here
                           </div>
                         ) : (
                           statusTasks.map((task) => (
-                            <TaskCard
+                            <DraggableTask
                               key={task.id}
-                              task={task}
-                              courses={courses}
-                            />
+                              id={task.id}
+                              status={task.status}
+                            >
+                              <TaskCard task={task} courses={courses} />
+                            </DraggableTask>
                           ))
                         )}
-                      </div>
-                    </div>
-                  );
-                },
-              )}
+                      </KanbanColumn>
+                    );
+                  },
+                )}
+              </KanbanBoard>
             </section>
           </>
         )}
@@ -558,8 +557,13 @@ function TaskCard({ task, courses }: { task: Task; courses: Course[] }) {
 
           <div>
             <label className="text-xs font-medium text-slate-500">
-              Progress: {task.progress}%
+              Manual progress: {task.progress}%
             </label>
+
+            <p className="mt-1 text-xs leading-5 text-slate-400">
+              Used only when this assignment has no checklist. Checklist
+              progress is calculated automatically.
+            </p>
 
             <input
               name="progress"

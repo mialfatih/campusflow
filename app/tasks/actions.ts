@@ -22,6 +22,35 @@ async function getAuthenticatedUser() {
   };
 }
 
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
+
+async function getChecklistState(supabase: SupabaseClient, taskId: string) {
+  const { data: items, error } = await supabase
+    .from("task_checklist_items")
+    .select("id, is_done")
+    .eq("task_id", taskId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const total = items?.length ?? 0;
+
+  const completed = items?.filter((item) => item.is_done).length ?? 0;
+
+  const hasChecklist = total > 0;
+
+  const progress = hasChecklist ? Math.round((completed / total) * 100) : null;
+
+  return {
+    total,
+    completed,
+    hasChecklist,
+    progress,
+    allComplete: hasChecklist && completed === total,
+  };
+}
+
 function normalizeDate(value: FormDataEntryValue | null) {
   const date = String(value ?? "").trim();
 
@@ -124,6 +153,24 @@ export async function updateTask(formData: FormData) {
     throw new Error("Course not found.");
   }
 
+  const checklist = await getChecklistState(supabase, taskId);
+
+  let finalProgress = progress;
+
+  if (checklist.hasChecklist && checklist.progress !== null) {
+    finalProgress = checklist.progress;
+  }
+
+  if (status === "submitted") {
+    if (checklist.hasChecklist && !checklist.allComplete) {
+      throw new Error(
+        `Complete all checklist items before submitting (${checklist.completed}/${checklist.total} completed).`,
+      );
+    }
+
+    finalProgress = 100;
+  }
+
   const submittedAt = status === "submitted" ? new Date().toISOString() : null;
 
   const { error } = await supabase
@@ -135,7 +182,7 @@ export async function updateTask(formData: FormData) {
       due_at: dueAt,
       priority,
       status,
-      progress: status === "submitted" ? 100 : progress,
+      progress: finalProgress,
       need_help: status === "submitted" ? false : needHelp,
       visibility,
       submitted_at: submittedAt,
@@ -171,5 +218,72 @@ export async function deleteTask(formData: FormData) {
   }
 
   revalidatePath("/tasks");
+  revalidatePath("/dashboard");
+}
+
+const taskStatuses = ["todo", "in_progress", "review", "submitted"] as const;
+
+type TaskStatus = (typeof taskStatuses)[number];
+
+export async function moveTaskStatus(taskId: string, newStatus: string) {
+  const { supabase, user } = await getAuthenticatedUser();
+
+  if (!taskStatuses.includes(newStatus as TaskStatus)) {
+    throw new Error("Invalid task status.");
+  }
+
+  const { data: task, error: taskError } = await supabase
+    .from("tasks")
+    .select("id")
+    .eq("id", taskId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (taskError || !task) {
+    throw new Error("Assignment not found.");
+  }
+
+  const checklist = await getChecklistState(supabase, taskId);
+
+  const updateData: {
+    status: TaskStatus;
+    submitted_at: string | null;
+    progress?: number;
+    need_help?: boolean;
+  } = {
+    status: newStatus as TaskStatus,
+    submitted_at: newStatus === "submitted" ? new Date().toISOString() : null,
+  };
+
+  if (newStatus === "submitted") {
+    if (checklist.hasChecklist && !checklist.allComplete) {
+      throw new Error(
+        `Complete all checklist items before submitting (${checklist.completed}/${checklist.total} completed).`,
+      );
+    }
+
+    updateData.progress = 100;
+    updateData.need_help = false;
+  } else if (checklist.hasChecklist && checklist.progress !== null) {
+    /*
+     * When a submitted assignment is moved
+     * back to another stage, restore progress
+     * from the actual checklist state.
+     */
+    updateData.progress = checklist.progress;
+  }
+
+  const { error } = await supabase
+    .from("tasks")
+    .update(updateData)
+    .eq("id", taskId)
+    .eq("user_id", user.id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/tasks");
+  revalidatePath(`/tasks/${taskId}`);
   revalidatePath("/dashboard");
 }
