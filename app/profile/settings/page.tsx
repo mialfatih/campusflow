@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 
+import { AppHeader } from "@/components/app-header";
+
 import { updateProfile } from "./actions";
 
 export default async function ProfileSettingsPage() {
@@ -34,23 +36,7 @@ export default async function ProfileSettingsPage() {
 
   return (
     <main className="min-h-screen bg-slate-50">
-      <header className="border-b bg-white">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-5">
-          <Link
-            href="/dashboard"
-            className="text-xl font-semibold tracking-tight text-slate-950"
-          >
-            CampusFlow
-          </Link>
-
-          <Link
-            href="/dashboard"
-            className="text-sm font-medium text-slate-600 hover:text-slate-950"
-          >
-            Dashboard
-          </Link>
-        </div>
-      </header>
+      <AppHeader />
 
       <div className="mx-auto max-w-2xl px-6 py-10">
         <p className="text-sm font-medium text-blue-600">Account</p>

@@ -5,6 +5,8 @@ import { notFound, redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 
+import { AppHeader } from "@/components/app-header";
+
 import {
   createChecklistItem,
   deleteChecklistItem,
@@ -39,9 +41,7 @@ function statusLabel(status: string) {
   return labels[status] ?? status;
 }
 
-export default async function TaskDetailPage({
-  params,
-}: PageProps) {
+export default async function TaskDetailPage({ params }: PageProps) {
   const { id } = await params;
 
   const supabase = await createClient();
@@ -56,7 +56,8 @@ export default async function TaskDetailPage({
 
   const { data: task, error } = await supabase
     .from("tasks")
-    .select(`
+    .select(
+      `
       id,
       title,
       description,
@@ -71,7 +72,8 @@ export default async function TaskDetailPage({
         name,
         code
       )
-    `)
+    `,
+    )
     .eq("id", id)
     .eq("user_id", user.id)
     .single();
@@ -80,58 +82,30 @@ export default async function TaskDetailPage({
     notFound();
   }
 
-  const { data: checklistData } =
-    await supabase
-      .from("task_checklist_items")
-      .select(`
+  const { data: checklistData } = await supabase
+    .from("task_checklist_items")
+    .select(
+      `
         id,
         content,
         is_done,
         position
-      `)
-      .eq("task_id", id)
-      .order("position");
+      `,
+    )
+    .eq("task_id", id)
+    .order("position");
 
   const checklist = checklistData ?? [];
 
-  const completedItems = checklist.filter(
-    (item) => item.is_done,
-  ).length;
+  const completedItems = checklist.filter((item) => item.is_done).length;
 
   const rawCourse = task.courses;
 
-  const course = Array.isArray(rawCourse)
-    ? rawCourse[0]
-    : rawCourse;
+  const course = Array.isArray(rawCourse) ? rawCourse[0] : rawCourse;
 
   return (
     <main className="min-h-screen bg-slate-50">
-      <header className="border-b bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-          <Link
-            href="/dashboard"
-            className="text-xl font-semibold tracking-tight text-slate-950"
-          >
-            CampusFlow
-          </Link>
-
-          <div className="flex items-center gap-5">
-            <Link
-              href="/tasks"
-              className="text-sm font-medium text-slate-600 hover:text-slate-950"
-            >
-              Assignments
-            </Link>
-
-            <Link
-              href="/dashboard"
-              className="text-sm font-medium text-slate-600 hover:text-slate-950"
-            >
-              Dashboard
-            </Link>
-          </div>
-        </div>
-      </header>
+      <AppHeader />
 
       <div className="mx-auto max-w-6xl px-6 py-10">
         <Link
@@ -150,8 +124,7 @@ export default async function TaskDetailPage({
                   <p className="text-sm font-medium text-blue-600">
                     {course?.code
                       ? `${course.code} · ${course.name}`
-                      : course?.name ??
-                        "Course"}
+                      : (course?.name ?? "Course")}
                   </p>
 
                   <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
@@ -203,28 +176,19 @@ export default async function TaskDetailPage({
                   </h2>
 
                   <p className="mt-1 text-sm text-slate-500">
-                    Break the assignment into smaller
-                    steps.
+                    Break the assignment into smaller steps.
                   </p>
                 </div>
 
                 {checklist.length > 0 && (
                   <p className="text-sm font-medium text-slate-500">
-                    {completedItems} /{" "}
-                    {checklist.length} completed
+                    {completedItems} / {checklist.length} completed
                   </p>
                 )}
               </div>
 
-              <form
-                action={createChecklistItem}
-                className="mt-6 flex gap-3"
-              >
-                <input
-                  type="hidden"
-                  name="task_id"
-                  value={task.id}
-                />
+              <form action={createChecklistItem} className="mt-6 flex gap-3">
+                <input type="hidden" name="task_id" value={task.id} />
 
                 <input
                   name="content"
@@ -248,48 +212,28 @@ export default async function TaskDetailPage({
                   </p>
 
                   <p className="mt-1 text-xs text-slate-400">
-                    Add the steps required to finish this
-                    assignment.
+                    Add the steps required to finish this assignment.
                   </p>
                 </div>
               ) : (
                 <div className="mt-6 divide-y">
                   {checklist.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center gap-4 py-4"
-                    >
-                      <form
-                        action={
-                          toggleChecklistItem
-                        }
-                      >
-                        <input
-                          type="hidden"
-                          name="task_id"
-                          value={task.id}
-                        />
+                    <div key={item.id} className="flex items-center gap-4 py-4">
+                      <form action={toggleChecklistItem}>
+                        <input type="hidden" name="task_id" value={task.id} />
 
-                        <input
-                          type="hidden"
-                          name="item_id"
-                          value={item.id}
-                        />
+                        <input type="hidden" name="item_id" value={item.id} />
 
                         <input
                           type="hidden"
                           name="is_done"
-                          value={String(
-                            item.is_done,
-                          )}
+                          value={String(item.is_done)}
                         />
 
                         <button
                           type="submit"
                           aria-label={
-                            item.is_done
-                              ? "Mark incomplete"
-                              : "Mark complete"
+                            item.is_done ? "Mark incomplete" : "Mark complete"
                           }
                           className={`flex h-6 w-6 items-center justify-center rounded-md border text-xs font-bold transition ${
                             item.is_done
@@ -311,22 +255,10 @@ export default async function TaskDetailPage({
                         {item.content}
                       </p>
 
-                      <form
-                        action={
-                          deleteChecklistItem
-                        }
-                      >
-                        <input
-                          type="hidden"
-                          name="task_id"
-                          value={task.id}
-                        />
+                      <form action={deleteChecklistItem}>
+                        <input type="hidden" name="task_id" value={task.id} />
 
-                        <input
-                          type="hidden"
-                          name="item_id"
-                          value={item.id}
-                        />
+                        <input type="hidden" name="item_id" value={item.id} />
 
                         <button
                           type="submit"
@@ -350,22 +282,14 @@ export default async function TaskDetailPage({
               </h2>
 
               <dl className="mt-5 space-y-5">
-                <DetailItem
-                  label="Status"
-                  value={statusLabel(task.status)}
-                />
+                <DetailItem label="Status" value={statusLabel(task.status)} />
 
-                <DetailItem
-                  label="Deadline"
-                  value={formatDate(task.due_at)}
-                />
+                <DetailItem label="Deadline" value={formatDate(task.due_at)} />
 
                 <DetailItem
                   label="Priority"
                   value={
-                    task.priority
-                      .charAt(0)
-                      .toUpperCase() +
+                    task.priority.charAt(0).toUpperCase() +
                     task.priority.slice(1)
                   }
                 />
@@ -373,20 +297,14 @@ export default async function TaskDetailPage({
                 <DetailItem
                   label="Visibility"
                   value={
-                    task.visibility
-                      .charAt(0)
-                      .toUpperCase() +
+                    task.visibility.charAt(0).toUpperCase() +
                     task.visibility.slice(1)
                   }
                 />
 
                 <DetailItem
                   label="Need Help"
-                  value={
-                    task.need_help
-                      ? "Yes"
-                      : "No"
-                  }
+                  value={task.need_help ? "Yes" : "No"}
                 />
               </dl>
             </div>
@@ -413,14 +331,11 @@ export default async function TaskDetailPage({
               href="/tasks"
               className="block rounded-2xl border bg-white p-6 transition hover:border-slate-400"
             >
-              <p className="font-medium text-slate-950">
-                Edit assignment
-              </p>
+              <p className="font-medium text-slate-950">Edit assignment</p>
 
               <p className="mt-1 text-sm leading-6 text-slate-500">
-                Change status, deadline, priority,
-                visibility, or help status from the
-                assignment board.
+                Change status, deadline, priority, visibility, or help status
+                from the assignment board.
               </p>
             </Link>
           </aside>
@@ -430,22 +345,14 @@ export default async function TaskDetailPage({
   );
 }
 
-function DetailItem({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function DetailItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <dt className="text-xs font-medium uppercase tracking-wider text-slate-400">
         {label}
       </dt>
 
-      <dd className="mt-1 text-sm font-medium text-slate-800">
-        {value}
-      </dd>
+      <dd className="mt-1 text-sm font-medium text-slate-800">{value}</dd>
     </div>
   );
 }

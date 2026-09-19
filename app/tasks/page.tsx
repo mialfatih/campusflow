@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/server";
 
 import { createTask, deleteTask, updateTask } from "./actions";
 
+import { AppHeader } from "@/components/app-header";
+
 import { DraggableTask, KanbanBoard, KanbanColumn } from "./kanban-board";
 
 type Course = {
@@ -161,32 +163,7 @@ export default async function TasksPage() {
 
   return (
     <main className="min-h-screen bg-slate-50">
-      <header className="border-b bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <Link
-            href="/dashboard"
-            className="text-xl font-semibold tracking-tight text-slate-950"
-          >
-            CampusFlow
-          </Link>
-
-          <div className="flex items-center gap-5">
-            <Link
-              href="/courses"
-              className="text-sm font-medium text-slate-600 hover:text-slate-950"
-            >
-              Courses
-            </Link>
-
-            <Link
-              href="/dashboard"
-              className="text-sm font-medium text-slate-600 hover:text-slate-950"
-            >
-              Dashboard
-            </Link>
-          </div>
-        </div>
-      </header>
+      <AppHeader />
 
       <div className="mx-auto max-w-7xl px-6 py-10">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">

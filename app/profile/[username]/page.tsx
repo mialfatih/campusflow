@@ -5,6 +5,8 @@ import { notFound, redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 
+import { AppHeader } from "@/components/app-header";
+
 import { sendFriendRequest } from "../../friends/actions";
 
 type PageProps = {
@@ -77,20 +79,7 @@ export default async function UserProfilePage({ params }: PageProps) {
 
   return (
     <main className="min-h-screen bg-slate-50">
-      <header className="border-b bg-white">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-5">
-          <Link
-            href="/dashboard"
-            className="text-xl font-semibold text-slate-950"
-          >
-            CampusFlow
-          </Link>
-
-          <Link href="/friends" className="text-sm font-medium text-slate-600">
-            Friends
-          </Link>
-        </div>
-      </header>
+        <AppHeader />
 
       <div className="mx-auto max-w-3xl px-6 py-12">
         <div className="rounded-2xl border bg-white p-8">

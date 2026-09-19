@@ -3,6 +3,8 @@ export const instant = false;
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { AppHeader } from "@/components/app-header";
+
 import { createClient } from "@/lib/supabase/server";
 
 import {
@@ -97,23 +99,7 @@ export default async function FriendsPage() {
 
   return (
     <main className="min-h-screen bg-slate-50">
-      <header className="border-b bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
-          <Link
-            href="/dashboard"
-            className="text-xl font-semibold text-slate-950"
-          >
-            CampusFlow
-          </Link>
-
-          <Link
-            href="/people"
-            className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-medium text-white"
-          >
-            Find classmates
-          </Link>
-        </div>
-      </header>
+      <AppHeader />
 
       <div className="mx-auto max-w-4xl px-6 py-10">
         <p className="text-sm font-medium text-blue-600">Social</p>

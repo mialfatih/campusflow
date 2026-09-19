@@ -3,6 +3,8 @@ export const instant = false;
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { AppHeader } from "@/components/app-header";
+
 import { createClient } from "@/lib/supabase/server";
 
 import {
@@ -55,23 +57,7 @@ export default async function CoursesPage() {
 
   return (
     <main className="min-h-screen bg-slate-50">
-      <header className="border-b bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <Link
-            href="/dashboard"
-            className="text-xl font-semibold tracking-tight text-slate-950"
-          >
-            CampusFlow
-          </Link>
-
-          <Link
-            href="/dashboard"
-            className="text-sm font-medium text-slate-600 transition hover:text-slate-950"
-          >
-            Back to dashboard
-          </Link>
-        </div>
-      </header>
+      <AppHeader />
 
       <div className="mx-auto max-w-7xl px-6 py-10">
         <div>
