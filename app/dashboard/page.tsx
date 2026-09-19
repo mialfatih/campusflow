@@ -98,7 +98,7 @@ export default async function DashboardPage() {
           <DashboardCard label="Submitted" value={submittedResult.count ?? 0} />
         </section>
 
-        <section className="mt-10 grid gap-5 md:grid-cols-3">
+        <section className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <Link
             href="/courses"
             className="rounded-2xl border bg-white p-6 transition hover:border-slate-400"
@@ -118,6 +118,17 @@ export default async function DashboardPage() {
 
             <p className="mt-2 text-sm leading-6 text-slate-500">
               Track assignments and deadlines.
+            </p>
+          </Link>
+
+          <Link
+            href="/activity"
+            className="rounded-2xl border bg-white p-6 transition hover:border-slate-400"
+          >
+            <p className="text-lg font-medium text-slate-950">Activity</p>
+
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              Review your academic progress and assignment history.
             </p>
           </Link>
 
