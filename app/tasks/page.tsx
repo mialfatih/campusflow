@@ -418,9 +418,12 @@ function TaskCard({ task, courses }: { task: Task; courses: Course[] }) {
             {courseCode ? `${courseCode} · ${courseName}` : courseName}
           </p>
 
-          <h3 className="mt-2 font-semibold leading-6 text-slate-950">
+          <Link
+            href={`/tasks/${task.id}`}
+            className="mt-2 block font-semibold leading-6 text-slate-950 hover:text-blue-600"
+          >
             {task.title}
-          </h3>
+          </Link>
         </div>
 
         {task.need_help && (
@@ -466,6 +469,13 @@ function TaskCard({ task, courses }: { task: Task; courses: Course[] }) {
           {task.visibility}
         </span>
       </div>
+
+      <Link
+        href={`/tasks/${task.id}`}
+        className="mt-5 inline-flex text-sm font-medium text-blue-600 hover:text-blue-800"
+      >
+        Open details →
+      </Link>
 
       <details className="mt-5 border-t pt-4">
         <summary className="cursor-pointer text-sm font-medium text-slate-600 hover:text-slate-950">
