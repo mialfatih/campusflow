@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 
 import { AppHeader } from "@/components/app-header";
 
+import { cancelHelpOffer, offerHelp } from "../help/actions";
+
 import { createClient } from "@/lib/supabase/server";
 
 type FeedActivity = {
@@ -21,6 +23,8 @@ type FeedActivity = {
   task_id: string;
   task_title: string;
   task_visibility: string;
+  task_need_help: boolean;
+  task_has_active_helper: boolean;
 
   course_name: string | null;
   course_code: string | null;
@@ -87,6 +91,39 @@ export default async function FeedPage() {
 
   const activities = (data ?? []) as FeedActivity[];
 
+  const helpTaskIds = Array.from(
+    new Set(
+      activities
+        .filter(
+          (activity) => !activity.is_own_activity && activity.task_need_help,
+        )
+        .map((activity) => activity.task_id),
+    ),
+  );
+
+  type HelpOfferState = {
+    id: string;
+    task_id: string;
+    status: string;
+  };
+
+  let myHelpOffers: HelpOfferState[] = [];
+
+  if (helpTaskIds.length > 0) {
+    const { data: offerData } = await supabase
+      .from("help_offers")
+      .select("id, task_id, status")
+      .eq("helper_id", user.id)
+      .in("task_id", helpTaskIds)
+      .in("status", ["pending", "accepted"]);
+
+    myHelpOffers = (offerData ?? []) as HelpOfferState[];
+  }
+
+  const helpOfferMap = new Map(
+    myHelpOffers.map((offer) => [offer.task_id, offer]),
+  );
+
   return (
     <main className="min-h-screen bg-slate-50">
       <AppHeader />
@@ -133,7 +170,11 @@ export default async function FeedPage() {
         ) : (
           <div className="mt-10 space-y-4">
             {activities.map((activity) => (
-              <FeedCard key={activity.activity_id} activity={activity} />
+              <FeedCard
+                key={activity.activity_id}
+                activity={activity}
+                helpOffer={helpOfferMap.get(activity.task_id) ?? null}
+              />
             ))}
           </div>
         )}
@@ -142,7 +183,17 @@ export default async function FeedPage() {
   );
 }
 
-function FeedCard({ activity }: { activity: FeedActivity }) {
+function FeedCard({
+  activity,
+  helpOffer,
+}: {
+  activity: FeedActivity;
+  helpOffer: {
+    id: string;
+    task_id: string;
+    status: string;
+  } | null;
+}) {
   const actorName = activity.actor_full_name || activity.actor_username;
 
   const fromStatus = String(activity.activity_metadata?.from_status ?? "");
@@ -204,8 +255,75 @@ function FeedCard({ activity }: { activity: FeedActivity }) {
             )}
 
             {activity.activity_type === "need_help_requested" && (
-              <div className="mt-3 inline-flex rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
-                Looking for help
+              <div className="mt-4">
+                {activity.is_own_activity ? (
+                  activity.task_has_active_helper ? (
+                    <span className="inline-flex rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
+                      Help in progress
+                    </span>
+                  ) : (
+                    <span className="inline-flex rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
+                      Looking for help
+                    </span>
+                  )
+                ) : !activity.task_need_help ? (
+                  <span className="inline-flex rounded-lg bg-slate-100 px-3 py-2 text-xs font-medium text-slate-500">
+                    Help request resolved
+                  </span>
+                ) : helpOffer?.status === "accepted" ? (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="inline-flex rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
+                      You&apos;re helping
+                    </span>
+
+                    <Link
+                      href={`/help/${helpOffer.id}`}
+                      className="text-xs font-medium text-blue-600 hover:text-blue-800"
+                    >
+                      Open Help Room →
+                    </Link>
+                  </div>
+                ) : activity.task_has_active_helper ? (
+                  <span className="inline-flex rounded-lg bg-slate-100 px-3 py-2 text-xs font-medium text-slate-500">
+                    Help in progress
+                  </span>
+                ) : helpOffer?.status === "pending" ? (
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-medium text-slate-500">
+                      Help offered
+                    </span>
+
+                    <form action={cancelHelpOffer}>
+                      <input
+                        type="hidden"
+                        name="offer_id"
+                        value={helpOffer.id}
+                      />
+
+                      <button
+                        type="submit"
+                        className="text-xs font-medium text-red-500 hover:text-red-700"
+                      >
+                        Cancel
+                      </button>
+                    </form>
+                  </div>
+                ) : (
+                  <form action={offerHelp}>
+                    <input
+                      type="hidden"
+                      name="task_id"
+                      value={activity.task_id}
+                    />
+
+                    <button
+                      type="submit"
+                      className="rounded-lg bg-slate-950 px-4 py-2 text-xs font-medium text-white transition hover:bg-slate-800"
+                    >
+                      I can help
+                    </button>
+                  </form>
+                )}
               </div>
             )}
           </div>

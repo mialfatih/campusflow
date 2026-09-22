@@ -12,6 +12,21 @@ export async function AppHeader() {
 
   let username: string | null = null;
 
+  let unreadNotifications = 0;
+
+  if (user) {
+    const { count } = await supabase
+      .from("notifications")
+      .select("*", {
+        count: "exact",
+        head: true,
+      })
+      .eq("user_id", user.id)
+      .is("read_at", null);
+
+    unreadNotifications = count ?? 0;
+  }
+
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
@@ -59,6 +74,18 @@ export async function AppHeader() {
             className="text-sm font-medium text-slate-600 transition hover:text-slate-950"
           >
             Friends
+          </Link>
+
+          <Link
+            href="/notifications"
+            className="relative text-sm font-medium text-slate-600 transition hover:text-slate-950"
+          >
+            Notifications
+            {unreadNotifications > 0 && (
+              <span className="ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-blue-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                {unreadNotifications > 99 ? "99+" : unreadNotifications}
+              </span>
+            )}
           </Link>
 
           <Link
