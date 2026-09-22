@@ -4,7 +4,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { AppHeader } from "@/components/app-header";
-
 import { createClient } from "@/lib/supabase/server";
 
 import {
@@ -14,6 +13,13 @@ import {
   setActiveSemester,
   updateCourse,
 } from "./actions";
+
+type Course = {
+  id: string;
+  name: string;
+  code: string | null;
+  course_space_id: string | null;
+};
 
 export default async function CoursesPage() {
   const supabase = await createClient();
@@ -26,7 +32,11 @@ export default async function CoursesPage() {
     redirect("/auth/login");
   }
 
-  const { data: semesterData } = await supabase
+  /* =========================================================
+     SEMESTERS
+  ========================================================= */
+
+  const { data: semesterData, error: semesterError } = await supabase
     .from("semesters")
     .select("*")
     .eq("user_id", user.id)
@@ -34,25 +44,41 @@ export default async function CoursesPage() {
       ascending: false,
     });
 
+  if (semesterError) {
+    throw new Error(semesterError.message);
+  }
+
   const semesters = semesterData ?? [];
 
-  const activeSemester = semesters.find((semester) => semester.is_active);
+  const activeSemester =
+    semesters.find((semester) => semester.is_active) ?? null;
 
-  let courses: Array<{
-    id: string;
-    name: string;
-    code: string | null;
-  }> = [];
+  /* =========================================================
+     COURSES FOR ACTIVE SEMESTER
+  ========================================================= */
+
+  let courses: Course[] = [];
 
   if (activeSemester) {
-    const { data } = await supabase
+    const { data, error: coursesError } = await supabase
       .from("courses")
-      .select("id, name, code")
+      .select(
+        `
+        id,
+        name,
+        code,
+        course_space_id
+      `,
+      )
       .eq("user_id", user.id)
       .eq("semester_id", activeSemester.id)
       .order("name");
 
-    courses = data ?? [];
+    if (coursesError) {
+      throw new Error(coursesError.message);
+    }
+
+    courses = (data ?? []) as Course[];
   }
 
   return (
@@ -60,22 +86,40 @@ export default async function CoursesPage() {
       <AppHeader />
 
       <div className="mx-auto max-w-7xl px-6 py-10">
-        <div>
-          <p className="text-sm font-medium text-blue-600">Academic Setup</p>
+        {/* =====================================================
+            PAGE HEADER
+        ====================================================== */}
 
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-950">
-            Semesters & Courses
-          </h1>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-sm font-medium text-blue-600">Academic Setup</p>
 
-          <p className="mt-2 max-w-2xl text-slate-600">
-            Organize your academic work by semester and course before adding
-            assignments.
-          </p>
+            <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-950">
+              Semesters & Courses
+            </h1>
+
+            <p className="mt-2 max-w-2xl text-slate-600">
+              Organize your academic work by semester and course before adding
+              assignments.
+            </p>
+          </div>
+
+          <Link
+            href="/course-spaces"
+            className="inline-flex shrink-0 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+          >
+            Course Spaces
+          </Link>
         </div>
 
         <div className="mt-10 grid gap-8 lg:grid-cols-[360px_1fr]">
-          {/* LEFT SIDE */}
+          {/* =================================================
+              LEFT SIDE
+          ================================================== */}
+
           <aside className="space-y-6">
+            {/* ADD SEMESTER */}
+
             <section className="rounded-2xl border bg-white p-6">
               <h2 className="text-lg font-semibold text-slate-950">
                 Add semester
@@ -146,6 +190,8 @@ export default async function CoursesPage() {
               </form>
             </section>
 
+            {/* SEMESTER LIST */}
+
             {semesters.length > 0 && (
               <section className="rounded-2xl border bg-white p-6">
                 <h2 className="text-lg font-semibold text-slate-950">
@@ -192,7 +238,10 @@ export default async function CoursesPage() {
             )}
           </aside>
 
-          {/* RIGHT SIDE */}
+          {/* =================================================
+              RIGHT SIDE
+          ================================================== */}
+
           <section>
             {!activeSemester ? (
               <div className="rounded-2xl border border-dashed bg-white p-10 text-center">
@@ -206,6 +255,8 @@ export default async function CoursesPage() {
               </div>
             ) : (
               <>
+                {/* ACTIVE SEMESTER HEADER */}
+
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                   <div>
                     <p className="text-sm text-slate-500">Active semester</p>
@@ -220,6 +271,8 @@ export default async function CoursesPage() {
                     {courses.length === 1 ? "course" : "courses"}
                   </p>
                 </div>
+
+                {/* ADD COURSE */}
 
                 <form
                   action={createCourse}
@@ -246,7 +299,7 @@ export default async function CoursesPage() {
                         type="text"
                         required
                         placeholder="Database Systems"
-                        className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-slate-500"
+                        className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-slate-500"
                       />
                     </div>
 
@@ -263,7 +316,8 @@ export default async function CoursesPage() {
                         name="code"
                         type="text"
                         placeholder="DBS401"
-                        className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-slate-500"
+                        autoComplete="off"
+                        className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm uppercase text-slate-950 outline-none transition focus:border-slate-500"
                       />
                     </div>
 
@@ -274,7 +328,15 @@ export default async function CoursesPage() {
                       Add course
                     </button>
                   </div>
+
+                  <p className="mt-3 text-xs leading-5 text-slate-400">
+                    Course code is an academic identifier such as ML401 or
+                    DBS401. Once the course is created, its code cannot be
+                    changed.
+                  </p>
                 </form>
+
+                {/* COURSE LIST */}
 
                 {courses.length === 0 ? (
                   <div className="mt-6 rounded-2xl border border-dashed bg-white p-10 text-center">
@@ -293,17 +355,29 @@ export default async function CoursesPage() {
                         key={course.id}
                         className="rounded-2xl border bg-white p-6"
                       >
+                        {/* COURSE HEADER */}
+
                         <div className="flex items-start justify-between gap-4">
                           <div>
-                            <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
-                              {course.code || "No course code"}
-                            </p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
+                                {course.code || "No course code"}
+                              </p>
+
+                              {course.course_space_id && (
+                                <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-medium text-blue-700">
+                                  Course Space
+                                </span>
+                              )}
+                            </div>
 
                             <h3 className="mt-2 text-lg font-semibold text-slate-950">
                               {course.name}
                             </h3>
                           </div>
                         </div>
+
+                        {/* EDIT COURSE */}
 
                         <details className="mt-6">
                           <summary className="cursor-pointer text-sm font-medium text-slate-600 hover:text-slate-950">
@@ -312,7 +386,7 @@ export default async function CoursesPage() {
 
                           <form
                             action={updateCourse}
-                            className="mt-4 space-y-3"
+                            className="mt-4 space-y-4"
                           >
                             <input
                               type="hidden"
@@ -320,48 +394,85 @@ export default async function CoursesPage() {
                               value={course.id}
                             />
 
-                            <input
-                              name="name"
-                              type="text"
-                              required
-                              defaultValue={course.name}
-                              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-950"
-                            />
+                            <div>
+                              <label
+                                htmlFor={`course-name-${course.id}`}
+                                className="text-xs font-medium uppercase tracking-wider text-slate-400"
+                              >
+                                Course name
+                              </label>
 
-                            <input
-                              name="code"
-                              type="text"
-                              defaultValue={course.code ?? ""}
-                              placeholder="Course code"
-                              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-950"
-                            />
+                              <input
+                                id={`course-name-${course.id}`}
+                                name="name"
+                                type="text"
+                                required
+                                defaultValue={course.name}
+                                className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-slate-500"
+                              />
+                            </div>
+
+                            {/* CODE IS READ ONLY */}
+
+                            <div>
+                              <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
+                                Course code
+                              </p>
+
+                              <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-sm font-medium text-slate-600">
+                                {course.code || "No course code"}
+                              </p>
+
+                              <p className="mt-1 text-xs leading-5 text-slate-400">
+                                Course codes cannot be changed after creation.
+                              </p>
+                            </div>
 
                             <button
                               type="submit"
-                              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                             >
                               Save changes
                             </button>
                           </form>
                         </details>
 
-                        <form
-                          action={deleteCourse}
-                          className="mt-4 border-t pt-4"
-                        >
-                          <input
-                            type="hidden"
-                            name="course_id"
-                            value={course.id}
-                          />
+                        {/* COURSE SPACE / DELETE */}
 
-                          <button
-                            type="submit"
-                            className="text-sm font-medium text-red-600 hover:text-red-800"
+                        {course.course_space_id ? (
+                          <div className="mt-4 border-t pt-4">
+                            <p className="text-xs leading-5 text-slate-400">
+                              This course is connected to a Course Space. Leave
+                              or delete the Course Space before deleting this
+                              personal course.
+                            </p>
+
+                            <Link
+                              href={`/course-spaces/${course.course_space_id}`}
+                              className="mt-3 inline-flex text-sm font-medium text-blue-600 hover:text-blue-800"
+                            >
+                              Open Course Space →
+                            </Link>
+                          </div>
+                        ) : (
+                          <form
+                            action={deleteCourse}
+                            className="mt-4 border-t pt-4"
                           >
-                            Delete course
-                          </button>
-                        </form>
+                            <input
+                              type="hidden"
+                              name="course_id"
+                              value={course.id}
+                            />
+
+                            <button
+                              type="submit"
+                              className="text-sm font-medium text-red-600 hover:text-red-800"
+                            >
+                              Delete course
+                            </button>
+                          </form>
+                        )}
                       </article>
                     ))}
                   </div>

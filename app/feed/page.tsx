@@ -4,15 +4,16 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { AppHeader } from "@/components/app-header";
+import { createClient } from "@/lib/supabase/server";
 
 import { cancelHelpOffer, offerHelp } from "../help/actions";
-
-import { createClient } from "@/lib/supabase/server";
 
 type FeedActivity = {
   activity_id: string;
   activity_type: string;
-  activity_metadata: Record<string, unknown>;
+
+  activity_metadata: Record<string, unknown> | null;
+
   activity_created_at: string;
 
   actor_id: string;
@@ -30,6 +31,12 @@ type FeedActivity = {
   course_code: string | null;
 
   is_own_activity: boolean;
+};
+
+type HelpOfferState = {
+  id: string;
+  task_id: string;
+  status: string;
 };
 
 const statusLabels: Record<string, string> = {
@@ -81,6 +88,24 @@ export default async function FeedPage() {
     redirect("/auth/login");
   }
 
+  /* =========================================================
+     SOCIAL FEED
+
+     Privacy is enforced by get_social_feed():
+
+     Own activity
+     → visible
+
+     Friends visibility
+     → accepted friends
+
+     Course visibility
+     → same Course Space
+
+     Private
+     → owner only
+  ========================================================= */
+
   const { data, error } = await supabase.rpc("get_social_feed", {
     p_limit: 50,
   });
@@ -90,6 +115,14 @@ export default async function FeedPage() {
   }
 
   const activities = (data ?? []) as FeedActivity[];
+
+  /* =========================================================
+     HELP OFFER STATE
+
+     We only need to retrieve offers for tasks that:
+     - belong to another user
+     - are currently requesting help
+  ========================================================= */
 
   const helpTaskIds = Array.from(
     new Set(
@@ -101,21 +134,19 @@ export default async function FeedPage() {
     ),
   );
 
-  type HelpOfferState = {
-    id: string;
-    task_id: string;
-    status: string;
-  };
-
   let myHelpOffers: HelpOfferState[] = [];
 
   if (helpTaskIds.length > 0) {
-    const { data: offerData } = await supabase
+    const { data: offerData, error: offerError } = await supabase
       .from("help_offers")
       .select("id, task_id, status")
       .eq("helper_id", user.id)
       .in("task_id", helpTaskIds)
       .in("status", ["pending", "accepted"]);
+
+    if (offerError) {
+      throw new Error(offerError.message);
+    }
 
     myHelpOffers = (offerData ?? []) as HelpOfferState[];
   }
@@ -129,6 +160,10 @@ export default async function FeedPage() {
       <AppHeader />
 
       <div className="mx-auto max-w-3xl px-6 py-10">
+        {/* =================================================
+            PAGE HEADER
+        ================================================== */}
+
         <div>
           <p className="text-sm font-medium text-blue-600">Social Progress</p>
 
@@ -137,37 +172,51 @@ export default async function FeedPage() {
           </h1>
 
           <p className="mt-2 max-w-2xl text-slate-600">
-            See meaningful academic progress from you and your friends. No
-            manual posts required.
+            See meaningful academic progress from friends and classmates.
           </p>
         </div>
+
+        {/* =================================================
+            EMPTY STATE
+        ================================================== */}
 
         {activities.length === 0 ? (
           <div className="mt-10 rounded-2xl border border-dashed bg-white p-10 text-center">
             <h2 className="font-semibold text-slate-950">Your feed is quiet</h2>
 
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              Add friends or update an assignment to start seeing academic
-              progress here.
+              Academic progress shared by friends and classmates will appear
+              here.
             </p>
 
-            <div className="mt-6 flex justify-center gap-3">
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Link
                 href="/people"
-                className="rounded-lg bg-slate-950 px-5 py-2.5 text-sm font-medium text-white"
+                className="rounded-lg bg-slate-950 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
               >
                 Find classmates
               </Link>
 
               <Link
+                href="/course-spaces"
+                className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                Course Spaces
+              </Link>
+
+              <Link
                 href="/tasks"
-                className="rounded-lg border px-5 py-2.5 text-sm font-medium text-slate-700"
+                className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
               >
                 View assignments
               </Link>
             </div>
           </div>
         ) : (
+          /* =================================================
+             FEED
+          ================================================== */
+
           <div className="mt-10 space-y-4">
             {activities.map((activity) => (
               <FeedCard
@@ -183,16 +232,17 @@ export default async function FeedPage() {
   );
 }
 
+/* =========================================================
+   FEED CARD
+========================================================= */
+
 function FeedCard({
   activity,
   helpOffer,
 }: {
   activity: FeedActivity;
-  helpOffer: {
-    id: string;
-    task_id: string;
-    status: string;
-  } | null;
+
+  helpOffer: HelpOfferState | null;
 }) {
   const actorName = activity.actor_full_name || activity.actor_username;
 
@@ -203,6 +253,8 @@ function FeedCard({
   return (
     <article className="rounded-2xl border bg-white p-6">
       <div className="flex gap-4">
+        {/* AVATAR */}
+
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-950 text-sm font-semibold text-white">
           {actorName
             .split(" ")
@@ -213,11 +265,15 @@ function FeedCard({
         </div>
 
         <div className="min-w-0 flex-1">
+          {/* ===============================================
+              ACTOR + DATE
+          ================================================ */}
+
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <Link
                 href={`/profile/${activity.actor_username}`}
-                className="font-semibold text-slate-950 hover:text-blue-600"
+                className="font-semibold text-slate-950 transition hover:text-blue-600"
               >
                 {actorName}
               </Link>
@@ -232,6 +288,10 @@ function FeedCard({
             </time>
           </div>
 
+          {/* ===============================================
+              ACTIVITY CONTENT
+          ================================================ */}
+
           <div className="mt-4">
             <p className="text-sm leading-6 text-slate-600">
               {activityText(activity)}{" "}
@@ -239,6 +299,8 @@ function FeedCard({
                 {activity.task_title}
               </span>
             </p>
+
+            {/* STATUS CHANGE */}
 
             {activity.activity_type === "status_changed" && (
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
@@ -254,6 +316,10 @@ function FeedCard({
               </div>
             )}
 
+            {/* =============================================
+                NEED HELP
+            ============================================== */}
+
             {activity.activity_type === "need_help_requested" && (
               <div className="mt-4">
                 {activity.is_own_activity ? (
@@ -261,9 +327,13 @@ function FeedCard({
                     <span className="inline-flex rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
                       Help in progress
                     </span>
-                  ) : (
+                  ) : activity.task_need_help ? (
                     <span className="inline-flex rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
                       Looking for help
+                    </span>
+                  ) : (
+                    <span className="inline-flex rounded-lg bg-slate-100 px-3 py-2 text-xs font-medium text-slate-500">
+                      Help request resolved
                     </span>
                   )
                 ) : !activity.task_need_help ? (
@@ -288,7 +358,7 @@ function FeedCard({
                     Help in progress
                   </span>
                 ) : helpOffer?.status === "pending" ? (
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
                     <span className="text-xs font-medium text-slate-500">
                       Help offered
                     </span>
@@ -328,19 +398,50 @@ function FeedCard({
             )}
           </div>
 
-          <div className="mt-5 flex items-center justify-between border-t pt-4">
-            <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
-              {activity.course_code
-                ? `${activity.course_code} · ${activity.course_name}`
-                : activity.course_name || "Academic Task"}
-            </p>
+          {/* ===============================================
+              COURSE + VISIBILITY
+          ================================================ */}
+
+          <div className="mt-5 flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
+                {activity.course_code
+                  ? `${activity.course_code} · ${activity.course_name}`
+                  : activity.course_name || "Academic Task"}
+              </p>
+
+              {/* COURSE VISIBILITY */}
+
+              {activity.task_visibility === "course" && (
+                <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-blue-700">
+                  Course
+                </span>
+              )}
+
+              {/* FRIEND VISIBILITY */}
+
+              {activity.task_visibility === "friends" && (
+                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-emerald-700">
+                  Friends
+                </span>
+              )}
+
+              {/* PRIVATE IS ONLY EVER VISIBLE TO OWNER */}
+
+              {activity.task_visibility === "private" &&
+                activity.is_own_activity && (
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-slate-500">
+                    Private
+                  </span>
+                )}
+            </div>
 
             {activity.is_own_activity && (
               <Link
                 href={`/tasks/${activity.task_id}`}
-                className="text-xs font-medium text-blue-600 hover:text-blue-800"
+                className="shrink-0 text-xs font-medium text-blue-600 hover:text-blue-800"
               >
-                Open assignment
+                Open assignment →
               </Link>
             )}
           </div>

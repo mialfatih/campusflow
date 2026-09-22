@@ -101,11 +101,11 @@ export default async function UserProfilePage({ params }: PageProps) {
 
   const currentUserId = user.id;
 
-  // -------------------------------------------------------
-  // PROFILE
-  // -------------------------------------------------------
+  /* =========================================================
+     PROFILE
+  ========================================================= */
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select(
       `
@@ -118,7 +118,11 @@ export default async function UserProfilePage({ params }: PageProps) {
     `,
     )
     .eq("username", username)
-    .single();
+    .maybeSingle();
+
+  if (profileError) {
+    throw new Error(profileError.message);
+  }
 
   if (!profile) {
     notFound();
@@ -126,9 +130,9 @@ export default async function UserProfilePage({ params }: PageProps) {
 
   const isOwnProfile = profile.id === currentUserId;
 
-  // -------------------------------------------------------
-  // FRIENDSHIP
-  // -------------------------------------------------------
+  /* =========================================================
+     FRIENDSHIP
+  ========================================================= */
 
   const { data: friendship } = !isOwnProfile
     ? await supabase
@@ -142,12 +146,12 @@ export default async function UserProfilePage({ params }: PageProps) {
 
   const isFriend = Boolean(friendship);
 
-  // -------------------------------------------------------
-  // PENDING REQUEST
-  // -------------------------------------------------------
+  /* =========================================================
+     PENDING FRIEND REQUEST
+  ========================================================= */
 
   const { data: request } =
-    !isOwnProfile && !friendship
+    !isOwnProfile && !isFriend
       ? await supabase
           .from("friend_requests")
           .select(
@@ -164,10 +168,46 @@ export default async function UserProfilePage({ params }: PageProps) {
           .maybeSingle()
       : { data: null };
 
-  // -------------------------------------------------------
-  // ACADEMIC PROGRESS
-  // Database RPC enforces privacy.
-  // -------------------------------------------------------
+  /* =========================================================
+     SHARED COURSE SPACE
+
+     This relationship is separate from friendship.
+
+     Example:
+     - not friends
+     - same ML401 Course Space
+     → course-visible progress can still be shown
+  ========================================================= */
+
+  let sharesCourseSpace = false;
+
+  if (!isOwnProfile) {
+    const { data: sharedCourseData, error: sharedCourseError } =
+      await supabase.rpc("shares_course_space_with", {
+        p_profile_id: profile.id,
+      });
+
+    if (sharedCourseError) {
+      throw new Error(sharedCourseError.message);
+    }
+
+    sharesCourseSpace = Boolean(sharedCourseData);
+  }
+
+  /* =========================================================
+     ACADEMIC PROGRESS
+
+     Privacy is enforced again inside the database RPCs.
+
+     Owner:
+     → all own tasks
+
+     Friend:
+     → friends-visible tasks
+
+     Same Course Space:
+     → course-visible tasks from shared spaces
+  ========================================================= */
 
   const [tasksResult, activitiesResult] = await Promise.all([
     supabase.rpc("get_profile_visible_tasks", {
@@ -192,9 +232,9 @@ export default async function UserProfilePage({ params }: PageProps) {
 
   const activities = (activitiesResult.data ?? []) as ProfileActivity[];
 
-  // -------------------------------------------------------
-  // PROFILE STATISTICS
-  // -------------------------------------------------------
+  /* =========================================================
+     PROFILE STATISTICS
+  ========================================================= */
 
   const inProgressCount = tasks.filter(
     (task) => task.task_status === "in_progress",
@@ -210,8 +250,6 @@ export default async function UserProfilePage({ params }: PageProps) {
 
   const needHelpCount = tasks.filter((task) => task.task_need_help).length;
 
-  // "Currently working on":
-  // active academic work only.
   const currentTasks = tasks
     .filter(
       (task) =>
@@ -219,16 +257,26 @@ export default async function UserProfilePage({ params }: PageProps) {
     )
     .slice(0, 6);
 
-  const canSeeProgress = isOwnProfile || isFriend;
+  /*
+   * The section is accessible if:
+   *
+   * 1. viewing own profile
+   * 2. accepted friend
+   * 3. member of at least one same Course Space
+   *
+   * Actual visible tasks are still filtered by
+   * the database RPC.
+   */
+  const canSeeProgress = isOwnProfile || isFriend || sharesCourseSpace;
 
   return (
     <main className="min-h-screen bg-slate-50">
       <AppHeader />
 
       <div className="mx-auto max-w-5xl px-6 py-10">
-        {/* ================================================
+        {/* =================================================
             PROFILE HEADER
-        ================================================= */}
+        ================================================== */}
 
         <section className="rounded-2xl border bg-white p-8">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
@@ -274,7 +322,7 @@ export default async function UserProfilePage({ params }: PageProps) {
                 >
                   Edit profile
                 </Link>
-              ) : friendship ? (
+              ) : isFriend ? (
                 <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700">
                   Friends
                 </span>
@@ -291,18 +339,35 @@ export default async function UserProfilePage({ params }: PageProps) {
                 <form action={sendFriendRequest}>
                   <input type="hidden" name="receiver_id" value={profile.id} />
 
-                  <button className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800">
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
+                  >
                     Add friend
                   </button>
                 </form>
               )}
             </div>
           </div>
+
+          {/* SHARED COURSE RELATIONSHIP */}
+
+          {!isOwnProfile && sharesCourseSpace && (
+            <div className="mt-6 border-t pt-5">
+              <span className="inline-flex rounded-full bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700">
+                Shared Course Space
+              </span>
+
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                You share at least one Course Space with this student.
+              </p>
+            </div>
+          )}
         </section>
 
-        {/* ================================================
-            NOT FRIEND
-        ================================================= */}
+        {/* =================================================
+            PRIVATE PROGRESS
+        ================================================== */}
 
         {!canSeeProgress && (
           <section className="mt-6 rounded-2xl border border-dashed bg-white p-10 text-center">
@@ -311,18 +376,21 @@ export default async function UserProfilePage({ params }: PageProps) {
             </h2>
 
             <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-500">
-              Connect as friends to see assignments that{" "}
-              {profile.full_name || profile.username} chooses to share with
-              friends.
+              Academic progress becomes visible when this student shares
+              assignments with friends or members of the same Course Space.
             </p>
           </section>
         )}
 
+        {/* =================================================
+            VISIBLE ACADEMIC PROGRESS
+        ================================================== */}
+
         {canSeeProgress && (
           <>
-            {/* ================================================
+            {/* =============================================
                 SUMMARY
-            ================================================= */}
+            ============================================== */}
 
             <section className="mt-6">
               <div className="mb-4">
@@ -333,7 +401,11 @@ export default async function UserProfilePage({ params }: PageProps) {
                 <p className="mt-1 text-sm text-slate-500">
                   {isOwnProfile
                     ? "Your current academic workload."
-                    : "Friend-visible academic progress."}
+                    : isFriend && sharesCourseSpace
+                      ? "Academic progress shared with friends and classmates."
+                      : isFriend
+                        ? "Friend-visible academic progress."
+                        : "Course-visible academic progress from shared Course Spaces."}
                 </p>
               </div>
 
@@ -348,9 +420,9 @@ export default async function UserProfilePage({ params }: PageProps) {
               </div>
             </section>
 
-            {/* ================================================
+            {/* =============================================
                 CURRENTLY WORKING ON
-            ================================================= */}
+            ============================================== */}
 
             <section className="mt-10">
               <div>
@@ -382,9 +454,9 @@ export default async function UserProfilePage({ params }: PageProps) {
               )}
             </section>
 
-            {/* ================================================
+            {/* =============================================
                 RECENT PROGRESS
-            ================================================= */}
+            ============================================== */}
 
             <section className="mt-10">
               <div>
@@ -433,7 +505,9 @@ export default async function UserProfilePage({ params }: PageProps) {
                             {activity.activity_type === "status_changed" && (
                               <p className="mt-1 text-xs text-slate-500">
                                 {statusLabels[fromStatus] ?? fromStatus}
+
                                 {" → "}
+
                                 {statusLabels[toStatus] ?? toStatus}
                               </p>
                             )}
@@ -462,6 +536,10 @@ export default async function UserProfilePage({ params }: PageProps) {
   );
 }
 
+/* =========================================================
+   SUMMARY CARD
+========================================================= */
+
 function SummaryCard({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-2xl border bg-white p-5">
@@ -474,6 +552,10 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
   );
 }
 
+/* =========================================================
+   TASK PROGRESS CARD
+========================================================= */
+
 function TaskProgressCard({
   task,
   isOwner,
@@ -485,11 +567,25 @@ function TaskProgressCard({
     <article className="rounded-2xl border bg-white p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
-            {task.course_code
-              ? `${task.course_code} · ${task.course_name}`
-              : task.course_name}
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
+              {task.course_code
+                ? `${task.course_code} · ${task.course_name}`
+                : task.course_name}
+            </p>
+
+            {task.task_visibility === "course" && (
+              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-blue-700">
+                Course
+              </span>
+            )}
+
+            {task.task_visibility === "friends" && (
+              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-emerald-700">
+                Friends
+              </span>
+            )}
+          </div>
 
           {isOwner ? (
             <Link
@@ -506,7 +602,7 @@ function TaskProgressCard({
         </div>
 
         {task.task_need_help && (
-          <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
+          <span className="shrink-0 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
             Need Help
           </span>
         )}
@@ -533,7 +629,7 @@ function TaskProgressCard({
           <div
             className="h-full rounded-full bg-slate-950"
             style={{
-              width: `${task.task_progress}%`,
+              width: `${Math.min(Math.max(task.task_progress, 0), 100)}%`,
             }}
           />
         </div>
