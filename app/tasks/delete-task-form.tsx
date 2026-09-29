@@ -3,48 +3,48 @@
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 
-import { deleteCourseSpace } from "../actions";
+import { deleteTask } from "./actions";
 
-type DeleteCourseSpaceFormProps = {
-  spaceId: string;
-  spaceName: string;
+type DeleteTaskFormProps = {
+  taskId: string;
+  taskTitle: string;
 };
 
-export function DeleteCourseSpaceForm({
-  spaceId,
-  spaceName,
-}: DeleteCourseSpaceFormProps) {
+export function DeleteTaskForm({ taskId, taskTitle }: DeleteTaskFormProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <>
+      {/* OPEN MODAL */}
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="rounded-lg border border-red-200 bg-white px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
+        className="text-sm font-medium text-red-600 transition hover:text-red-800"
       >
-        Delete Course Space
+        Delete assignment
       </button>
 
+      {/* MODAL */}
       {isOpen && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-[2px]"
           role="dialog"
           aria-modal="true"
-          aria-labelledby="delete-space-title"
+          aria-labelledby="delete-task-title"
         >
           <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+            {/* HEADER */}
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-medium uppercase tracking-wider text-red-500">
-                  Delete Course Space
+                  Delete assignment
                 </p>
 
                 <h2
-                  id="delete-space-title"
+                  id="delete-task-title"
                   className="mt-2 text-xl font-semibold tracking-tight text-slate-950"
                 >
-                  Dissolve this Course Space?
+                  Delete this assignment?
                 </h2>
               </div>
 
@@ -58,36 +58,23 @@ export function DeleteCourseSpaceForm({
               </button>
             </div>
 
+            {/* CONTENT */}
             <div className="mt-5">
               <div className="rounded-xl bg-slate-50 p-4">
                 <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
-                  Course Space
+                  Assignment
                 </p>
 
-                <p className="mt-1 font-medium text-slate-950">{spaceName}</p>
+                <p className="mt-1 font-medium text-slate-950">{taskTitle}</p>
               </div>
 
               <p className="mt-4 text-sm leading-6 text-slate-600">
-                Every member will be disconnected from this shared class.
-              </p>
-
-              <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 p-4">
-                <p className="text-xs font-medium uppercase tracking-wider text-emerald-700">
-                  Personal data stays safe
-                </p>
-
-                <p className="mt-2 text-sm leading-6 text-emerald-800">
-                  Personal courses, assignments, checklists, and progress will
-                  not be deleted.
-                </p>
-              </div>
-
-              <p className="mt-4 text-sm font-medium text-red-600">
-                The shared Course Space itself cannot be restored after
-                deletion.
+                This assignment will be permanently deleted, including its
+                related checklist data. This action cannot be undone.
               </p>
             </div>
 
+            {/* ACTIONS */}
             <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button
                 type="button"
@@ -97,10 +84,10 @@ export function DeleteCourseSpaceForm({
                 Cancel
               </button>
 
-              <form action={deleteCourseSpace}>
-                <input type="hidden" name="space_id" value={spaceId} />
+              <form action={deleteTask}>
+                <input type="hidden" name="task_id" value={taskId} />
 
-                <DeleteSpaceButton />
+                <DeleteButton />
               </form>
             </div>
           </div>
@@ -110,7 +97,7 @@ export function DeleteCourseSpaceForm({
   );
 }
 
-function DeleteSpaceButton() {
+function DeleteButton() {
   const { pending } = useFormStatus();
 
   return (
@@ -119,7 +106,7 @@ function DeleteSpaceButton() {
       disabled={pending}
       className="w-full rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
     >
-      {pending ? "Deleting..." : "Delete Course Space"}
+      {pending ? "Deleting..." : "Delete assignment"}
     </button>
   );
 }

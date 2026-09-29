@@ -6,6 +6,8 @@ import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
 import { createClient } from "@/lib/supabase/server";
 
+import { SubmitButton } from "@/components/submit-button";
+
 import { createCourseSpace, joinCourseSpace } from "./actions";
 
 type PageProps = {
@@ -305,12 +307,12 @@ export default async function CourseSpacesPage({ searchParams }: PageProps) {
                   course code.
                 </p>
 
-                <button
-                  type="submit"
+                <SubmitButton
+                  pendingText="Creating..."
                   className="mt-5 w-full rounded-lg bg-slate-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
                 >
                   Create Course Space
-                </button>
+                </SubmitButton>
               </form>
             )}
           </section>
@@ -398,12 +400,12 @@ export default async function CourseSpacesPage({ searchParams }: PageProps) {
                   </p>
                 </div>
 
-                <button
-                  type="submit"
+                <SubmitButton
+                  pendingText="Joining..."
                   className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
                 >
                   Join Course Space
-                </button>
+                </SubmitButton>
               </form>
             )}
           </section>

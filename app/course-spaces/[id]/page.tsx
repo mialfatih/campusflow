@@ -6,7 +6,7 @@ import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
 import { createClient } from "@/lib/supabase/server";
 
-import { leaveCourseSpace } from "../actions";
+import { LeaveSpaceForm } from "./leave-space-form";
 
 import { DeleteCourseSpaceForm } from "./delete-space-form";
 
@@ -512,16 +512,9 @@ export default async function CourseSpacePage({ params }: PageProps) {
               Your course, assignments, and progress remain in your account.
             </p>
 
-            <form action={leaveCourseSpace} className="mt-4">
-              <input type="hidden" name="space_id" value={space.id} />
-
-              <button
-                type="submit"
-                className="text-sm font-medium text-red-600 hover:text-red-700"
-              >
-                Leave Course Space
-              </button>
-            </form>
+            <div className="mt-4">
+              <LeaveSpaceForm spaceId={space.id} spaceName={space.name} />
+            </div>
           </section>
         )}
 

@@ -3,17 +3,14 @@
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 
-import { deleteCourseSpace } from "../actions";
+import { leaveCourseSpace } from "../actions";
 
-type DeleteCourseSpaceFormProps = {
+type LeaveSpaceFormProps = {
   spaceId: string;
   spaceName: string;
 };
 
-export function DeleteCourseSpaceForm({
-  spaceId,
-  spaceName,
-}: DeleteCourseSpaceFormProps) {
+export function LeaveSpaceForm({ spaceId, spaceName }: LeaveSpaceFormProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -21,9 +18,9 @@ export function DeleteCourseSpaceForm({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="rounded-lg border border-red-200 bg-white px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
+        className="text-sm font-medium text-red-600 transition hover:text-red-700"
       >
-        Delete Course Space
+        Leave Course Space
       </button>
 
       {isOpen && (
@@ -31,20 +28,20 @@ export function DeleteCourseSpaceForm({
           className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-[2px]"
           role="dialog"
           aria-modal="true"
-          aria-labelledby="delete-space-title"
+          aria-labelledby="leave-space-title"
         >
           <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-red-500">
-                  Delete Course Space
+                <p className="text-xs font-medium uppercase tracking-wider text-amber-600">
+                  Leave Course Space
                 </p>
 
                 <h2
-                  id="delete-space-title"
+                  id="leave-space-title"
                   className="mt-2 text-xl font-semibold tracking-tight text-slate-950"
                 >
-                  Dissolve this Course Space?
+                  Leave this class?
                 </h2>
               </div>
 
@@ -68,23 +65,13 @@ export function DeleteCourseSpaceForm({
               </div>
 
               <p className="mt-4 text-sm leading-6 text-slate-600">
-                Every member will be disconnected from this shared class.
+                Your personal course, assignments, checklists, and progress will
+                remain in your account.
               </p>
 
-              <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 p-4">
-                <p className="text-xs font-medium uppercase tracking-wider text-emerald-700">
-                  Personal data stays safe
-                </p>
-
-                <p className="mt-2 text-sm leading-6 text-emerald-800">
-                  Personal courses, assignments, checklists, and progress will
-                  not be deleted.
-                </p>
-              </div>
-
-              <p className="mt-4 text-sm font-medium text-red-600">
-                The shared Course Space itself cannot be restored after
-                deletion.
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Course-visible work will stop being shared with members of this
+                Course Space after you leave.
               </p>
             </div>
 
@@ -97,10 +84,10 @@ export function DeleteCourseSpaceForm({
                 Cancel
               </button>
 
-              <form action={deleteCourseSpace}>
+              <form action={leaveCourseSpace}>
                 <input type="hidden" name="space_id" value={spaceId} />
 
-                <DeleteSpaceButton />
+                <LeaveButton />
               </form>
             </div>
           </div>
@@ -110,7 +97,7 @@ export function DeleteCourseSpaceForm({
   );
 }
 
-function DeleteSpaceButton() {
+function LeaveButton() {
   const { pending } = useFormStatus();
 
   return (
@@ -119,7 +106,7 @@ function DeleteSpaceButton() {
       disabled={pending}
       className="w-full rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
     >
-      {pending ? "Deleting..." : "Delete Course Space"}
+      {pending ? "Leaving..." : "Leave Course Space"}
     </button>
   );
 }

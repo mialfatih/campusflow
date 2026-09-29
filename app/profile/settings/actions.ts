@@ -5,7 +5,15 @@ import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 
-export async function updateProfile(formData: FormData) {
+export type ProfileActionState = {
+  status: "idle" | "success" | "error";
+  message: string;
+};
+
+export async function updateProfile(
+  _previousState: ProfileActionState,
+  formData: FormData,
+): Promise<ProfileActionState> {
   const supabase = await createClient();
 
   const {
@@ -28,15 +36,55 @@ export async function updateProfile(formData: FormData) {
 
   const bio = String(formData.get("bio") ?? "").trim() || null;
 
+  /* =========================================================
+     VALIDATION
+  ========================================================= */
+
   if (!fullName) {
-    throw new Error("Full name is required.");
+    return {
+      status: "error",
+      message: "Full name is required.",
+    };
+  }
+
+  if (!username) {
+    return {
+      status: "error",
+      message: "Username is required.",
+    };
   }
 
   if (!/^[a-z0-9._-]{3,30}$/.test(username)) {
-    throw new Error(
-      "Username must be 3-30 characters and may contain lowercase letters, numbers, dots, underscores, or hyphens.",
-    );
+    return {
+      status: "error",
+      message:
+        "Username must be 3–30 characters and may contain lowercase letters, numbers, dots, underscores, or hyphens.",
+    };
   }
+
+  /* =========================================================
+     CURRENT PROFILE
+  ========================================================= */
+
+  const { data: currentProfile, error: currentProfileError } = await supabase
+    .from("profiles")
+    .select("username")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (currentProfileError) {
+    return {
+      status: "error",
+      message:
+        "CampusFlow could not load your current profile. Please try again.",
+    };
+  }
+
+  const previousUsername = currentProfile?.username ?? null;
+
+  /* =========================================================
+     UPDATE
+  ========================================================= */
 
   const { error } = await supabase
     .from("profiles")
@@ -51,13 +99,38 @@ export async function updateProfile(formData: FormData) {
 
   if (error) {
     if (error.code === "23505") {
-      throw new Error("That username is already taken.");
+      return {
+        status: "error",
+        message: "That username is already taken. Try another one.",
+      };
     }
 
-    throw new Error(error.message);
+    console.error("Profile update failed:", error);
+
+    return {
+      status: "error",
+      message: "CampusFlow could not save your profile. Please try again.",
+    };
   }
+
+  /* =========================================================
+     REVALIDATE
+  ========================================================= */
 
   revalidatePath("/dashboard");
   revalidatePath("/profile/settings");
+  revalidatePath("/people");
+  revalidatePath("/friends");
+  revalidatePath("/feed");
+
+  if (previousUsername) {
+    revalidatePath(`/profile/${previousUsername}`);
+  }
+
   revalidatePath(`/profile/${username}`);
+
+  return {
+    status: "success",
+    message: "Profile saved successfully.",
+  };
 }

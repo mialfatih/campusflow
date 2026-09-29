@@ -6,10 +6,12 @@ import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
 import { createClient } from "@/lib/supabase/server";
 
+import { DeleteCourseForm } from "./delete-course-form";
+import { SubmitButton } from "@/components/submit-button";
+
 import {
   createCourse,
   createSemester,
-  deleteCourse,
   setActiveSemester,
   updateCourse,
 } from "./actions";
@@ -181,12 +183,12 @@ export default async function CoursesPage() {
                   />
                 </div>
 
-                <button
-                  type="submit"
+                <SubmitButton
+                  pendingText="Creating..."
                   className="w-full rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
                 >
                   Create semester
-                </button>
+                </SubmitButton>
               </form>
             </section>
 
@@ -222,12 +224,12 @@ export default async function CoursesPage() {
                               value={semester.id}
                             />
 
-                            <button
-                              type="submit"
+                            <SubmitButton
+                              pendingText="Activating..."
                               className="text-xs font-medium text-blue-600 hover:text-blue-800"
                             >
                               Set active
-                            </button>
+                            </SubmitButton>
                           </form>
                         )}
                       </div>
@@ -321,12 +323,12 @@ export default async function CoursesPage() {
                       />
                     </div>
 
-                    <button
-                      type="submit"
+                    <SubmitButton
+                      pendingText="Adding..."
                       className="rounded-lg bg-slate-950 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
                     >
                       Add course
-                    </button>
+                    </SubmitButton>
                   </div>
 
                   <p className="mt-3 text-xs leading-5 text-slate-400">
@@ -428,12 +430,12 @@ export default async function CoursesPage() {
                               </p>
                             </div>
 
-                            <button
-                              type="submit"
+                            <SubmitButton
+                              pendingText="Saving..."
                               className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                             >
                               Save changes
-                            </button>
+                            </SubmitButton>
                           </form>
                         </details>
 
@@ -455,23 +457,12 @@ export default async function CoursesPage() {
                             </Link>
                           </div>
                         ) : (
-                          <form
-                            action={deleteCourse}
-                            className="mt-4 border-t pt-4"
-                          >
-                            <input
-                              type="hidden"
-                              name="course_id"
-                              value={course.id}
+                          <div className="mt-4 border-t pt-4">
+                            <DeleteCourseForm
+                              courseId={course.id}
+                              courseName={course.name}
                             />
-
-                            <button
-                              type="submit"
-                              className="text-sm font-medium text-red-600 hover:text-red-800"
-                            >
-                              Delete course
-                            </button>
-                          </form>
+                          </div>
                         )}
                       </article>
                     ))}
