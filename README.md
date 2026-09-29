@@ -1197,35 +1197,81 @@ These features are outside the current V1 scope.
 
 ---
 
-## Screenshots
+## Live Demo
 
-Screenshots of the production application can be added here.
+CampusFlow is live and available on Vercel.
 
-Recommended screenshots:
+**[Open CampusFlow Live Demo](https://campusflow-beryl-beta.vercel.app)**
 
-1. Landing Page
-2. Dashboard
-3. Assignment Kanban Board
-4. Course Space
-5. Help Room
+Click the preview below to open the production application.
 
-Example structure:
+[![CampusFlow Landing Page](docs/screenshots/landing.png)](https://campusflow-beryl-beta.vercel.app)
 
-```markdown
-### Landing Page
+---
 
-![CampusFlow Landing Page](docs/screenshots/landing.png)
+## Product Preview
 
-### Dashboard
+### Application Workflow
 
-![CampusFlow Dashboard](docs/screenshots/dashboard.png)
+A short walkthrough of the CampusFlow experience, from managing academic work to collaborating with classmates.
 
-### Task Board
+![CampusFlow Demo](docs/screenshots/campusflow-demo.gif)
 
-![CampusFlow Task Board](docs/screenshots/tasks.png)
+The demo highlights the core workflow:
+
+```text
+Dashboard
+   ↓
+Assignment Board
+   ↓
+Track Progress
+   ↓
+Course Space
+   ↓
+Need Help
+   ↓
+Help Room
 ```
 
 ---
+
+### Dashboard
+
+The dashboard gives students an overview of their academic workload, active semester, assignment statistics, workspace shortcuts, and onboarding progress.
+
+[![CampusFlow Dashboard](docs/screenshots/dashboard.png)](https://campusflow-beryl-beta.vercel.app/dashboard)
+
+---
+
+### Assignment Board
+
+Assignments are managed through a Kanban workflow with four stages:
+
+```text
+To Do
+  ↓
+In Progress
+  ↓
+Review
+  ↓
+Submitted
+```
+
+The board supports drag and drop, priorities, deadlines, checklist-based progress, visibility controls, manual ordering, and Need Help status.
+
+[![CampusFlow Assignment Board](docs/screenshots/tasks.png)](https://campusflow-beryl-beta.vercel.app/tasks)
+
+---
+
+## Try CampusFlow
+
+Explore the complete application:
+
+**Live Application:**  
+https://campusflow-beryl-beta.vercel.app
+
+**GitHub Repository:**  
+https://github.com/mialfatih/campusflow
 
 ## Repository
 
