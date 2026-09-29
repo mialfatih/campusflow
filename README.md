@@ -1197,47 +1197,19 @@ These features are outside the current V1 scope.
 
 ---
 
-## Live Demo
+## Screenshots
 
-CampusFlow is live and available on Vercel.
+### Landing Page
 
-**[Open CampusFlow Live Demo](https://campusflow-beryl-beta.vercel.app)**
-
-Click the preview below to open the production application.
+CampusFlow provides a responsive public landing page that introduces the product, academic workflow, collaboration features, and privacy-first approach.
 
 [![CampusFlow Landing Page](docs/screenshots/landing.png)](https://campusflow-beryl-beta.vercel.app)
 
 ---
 
-## Product Preview
-
-### Application Workflow
-
-A short walkthrough of the CampusFlow experience, from managing academic work to collaborating with classmates.
-
-![CampusFlow Demo](docs/screenshots/campusflow-demo.gif)
-
-The demo highlights the core workflow:
-
-```text
-Dashboard
-   ↓
-Assignment Board
-   ↓
-Track Progress
-   ↓
-Course Space
-   ↓
-Need Help
-   ↓
-Help Room
-```
-
----
-
 ### Dashboard
 
-The dashboard gives students an overview of their academic workload, active semester, assignment statistics, workspace shortcuts, and onboarding progress.
+The dashboard gives students an overview of their academic workload, active semester, assignment statistics, workspace status, and onboarding progress.
 
 [![CampusFlow Dashboard](docs/screenshots/dashboard.png)](https://campusflow-beryl-beta.vercel.app/dashboard)
 
@@ -1245,19 +1217,7 @@ The dashboard gives students an overview of their academic workload, active seme
 
 ### Assignment Board
 
-Assignments are managed through a Kanban workflow with four stages:
-
-```text
-To Do
-  ↓
-In Progress
-  ↓
-Review
-  ↓
-Submitted
-```
-
-The board supports drag and drop, priorities, deadlines, checklist-based progress, visibility controls, manual ordering, and Need Help status.
+Assignments are organized through a Kanban workflow with progress tracking, priorities, visibility controls, drag and drop, and Need Help support.
 
 [![CampusFlow Assignment Board](docs/screenshots/tasks.png)](https://campusflow-beryl-beta.vercel.app/tasks)
 
@@ -1265,23 +1225,11 @@ The board supports drag and drop, priorities, deadlines, checklist-based progres
 
 ## Try CampusFlow
 
-Explore the complete application:
-
 **Live Application:**  
 https://campusflow-beryl-beta.vercel.app
 
 **GitHub Repository:**  
 https://github.com/mialfatih/campusflow
-
-## Repository
-
-GitHub:
-
-https://github.com/mialfatih/campusflow
-
-Live application:
-
-https://campusflow-beryl-beta.vercel.app
 
 ---
 
